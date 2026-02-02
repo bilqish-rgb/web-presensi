@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presensi Harian</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+body{margin:0;font-family:'Outfit',sans-serif;background:linear-gradient(180deg,#e0f2fe,#f0f9ff)}
+.app{max-width:420px;margin:auto;min-height:100vh}
+.header{padding:22px;background:linear-gradient(135deg,#38bdf8,#60a5fa,#93c5fd);border-radius:0 0 32px 32px;text-align:center;color:white}
+.clock{font-size:22px;font-weight:800}
+.date{font-size:13px;font-weight:600}
+.content{padding:16px}
+.card{background:white;border-radius:28px;padding:18px;box-shadow:0 12px 25px rgba(0,0,0,.1)}
+input{width:100%;padding:14px;border-radius:20px;border:2px solid #bae6fd;margin-bottom:12px}
+.radio{display:flex;justify-content:center;gap:24px;margin-bottom:14px}
+button{width:100%;padding:14px;border-radius:24px;font-weight:800;border:none;color:white;background:linear-gradient(135deg,#38bdf8,#0ea5e9)}
+.history{background:white;border-radius:28px;padding:14px;margin-top:16px}
+.riwayat{background:#f0f9ff;border-radius:18px;padding:10px;margin-bottom:8px;font-size:13px}
+.tepat{color:#16a34a;font-weight:800}
+.telat{color:#dc2626;font-weight:800}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<div class="header">
+  <h2>📝 Presensi Harian</h2>
+  <p>SMKN 1 Mejayan</p>
+  <div id="clock" class="clock"></div>
+  <div id="tanggal" class="date"></div>
+</div>
+
+<div class="content">
+
+<div class="card">
+<form id="form">
+  <input id="nama" placeholder="Nama Lengkap" required>
+
+  <div class="radio">
+    <label><input type="radio" name="status" value="Masuk" required> Masuk</label>
+    <label><input type="radio" name="status" value="Pulang"> Pulang</label>
+  </div>
+
+  <button>⏱️ Simpan Presensi</button>
+</form>
+</div>
+
+<div class="history">
+<h3>📘 Riwayat Presensi</h3>
+<div id="list"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+// JAM & TANGGAL REAL TIME (AMAN WEBVIEW)
+const clockEl=document.getElementById("clock");
+const tanggalEl=document.getElementById("tanggal");
+function updateWaktu(){
+  const n=new Date();
+  clockEl.textContent=n.toLocaleTimeString("id-ID",{hour12:false});
+  tanggalEl.textContent=n.toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+}
+setInterval(updateWaktu,1000);updateWaktu();
+
+// STORAGE
+const KEY="presensi_harian";
+const load=()=>JSON.parse(localStorage.getItem(KEY)||"[]");
+const save=d=>localStorage.setItem(KEY,JSON.stringify(d));
+
+// TAMPIL RIWAYAT
+function tampilkan(){
+  list.innerHTML=load().reverse().map(r=>`
+    <div class="riwayat">
+      <b>${r.nama}</b><br>
+      📅 ${r.tanggal}<br>
+      🟢 Masuk: ${r.masuk?${r.masuk.jam} <span class="${r.masuk.cls}">${r.masuk.ket}</span>:"❌"}<br>
+      🔵 Pulang: ${r.pulang?r.pulang.jam:"❌"}
+    </div>
+  `).join("");
+}
+tampilkan();
+
+// SUBMIT
+form.onsubmit=e=>{
+  e.preventDefault();
+
+  const now=new Date();
+  const tanggal=now.toLocaleDateString("id-ID");
+  const jam=now.toLocaleTimeString("id-ID");
+  const status=document.querySelector("[name=status]:checked").value;
+  const namaUser=nama.value.trim();
+
+  let data=load();
+  let hari=data.find(x=>x.nama===namaUser && x.tanggal===tanggal);
+
+  if(hari){
+    if(status==="Masuk"){
+      if(hari.masuk) return alert("Masuk hanya 1x sehari");
+      hari.masuk={
+        jam,
+        ket:now.getHours()>8?"❌ TERLAMBAT":"✅ TEPAT WAKTU",
+        cls:now.getHours()>8?"telat":"tepat"
+      };
+    }else{
+      if(!hari.masuk) return alert("Belum absen masuk");
+      if(hari.pulang) return alert("Pulang hanya 1x sehari");
+      hari.pulang={jam};
+    }
+  }else{
+    if(status==="Pulang") return alert("Absen masuk dulu");
+    data.push({
+      nama:namaUser,
+      tanggal,
+      masuk:{
+        jam,
+        ket:now.getHours()>8?"❌ TERLAMBAT":"✅ TEPAT WAKTU",
+        cls:now.getHours()>8?"telat":"tepat"
+      }
+    });
+  }
+
+  save(data);
+  tampilkan();
+  form.reset();
+  alert("✅ Presensi berhasil");
+};
+</script>
+
+</body>
+</html>
